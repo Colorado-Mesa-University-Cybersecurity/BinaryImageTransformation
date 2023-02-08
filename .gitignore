@@ -1,3 +1,20 @@
+# Project specific
+
+
+# CSV files
+*.csv
+
+# Arff files
+*.arff
+
+# Pickle files for CSV caching
+*.csv.pickle
+*.pickle
+
+
+# Githubs boilerplate for python projects
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
