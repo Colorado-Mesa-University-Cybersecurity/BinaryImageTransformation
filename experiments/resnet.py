@@ -8,6 +8,7 @@ import tensorflow as tf
 import keras
 import time
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 
 
@@ -143,6 +144,24 @@ def get_callbacks(file_path : str, fold : int) -> list:
     tb_callback = tf.keras.callbacks.TensorBoard(file_path+'tb_logs', update_freq=1)
     return [resnet_checkpoint,resnet_early_stopping,reduce_lr,tb_callback,time_callback]
 
+def average_metrics_over_k_folds(k_fold_metrics : list):
+    """Average the metrics over the k folds.
+
+    Args:
+        k_fold_metrics (list): A list of metrics for each fold.
+    """
+    avg_metrics = {}
+    for metric in k_fold_metrics[0].keys():
+        cnt = 0
+        avg_metrics[metric] = 0
+        for i in range(len(k_fold_metrics)):
+            try:
+                avg_metrics[metric] += k_fold_metrics[i][metric]
+                cnt += 1
+            except:
+                continue
+        avg_metrics[metric] = avg_metrics[metric]/cnt
+    return avg_metrics
 
 def train_resnet_model_k_fold(num_classes : int, img_size : tuple,train_data_location : str, number_of_epochs : int,
                               file_path : str, num_folds : int = 5, batch_size : int = 64, seed: int = 17) -> None:
@@ -159,6 +178,7 @@ def train_resnet_model_k_fold(num_classes : int, img_size : tuple,train_data_loc
     """
     best_model = None
     actual_model = None
+    k_fold_metrics = []
     with tf.device(tf.DeviceSpec(device_type="GPU", device_index='0')):
         for fold in range(num_folds):
             print("Fold: ", fold)
@@ -173,11 +193,15 @@ def train_resnet_model_k_fold(num_classes : int, img_size : tuple,train_data_loc
             
             resnet50_history = resnet50_x_final_model.fit(train_generator, epochs = number_of_epochs ,validation_data = validation_generator,callbacks=callback_list,verbose=1)
             pd.DataFrame.from_dict(resnet50_history.history).to_csv(file_path+'history'+str(fold)+'.csv',index=False)
+            # append resnet50_history with the metrics for the last epoch for each key
+            k_fold_metrics.append({key: resnet50_history.history[key][-1] for key in resnet50_history.history.keys()})
             if best_model is None or best_model.history['val_acc'][-1] < resnet50_history.history['val_acc'][-1]:
                 best_model = resnet50_history
                 actual_model = resnet50_x_final_model
     actual_model.save(file_path+'best_model.h5')
     print(f"Best model results: val_acc: {best_model.history['val_acc'][-1]}, val_loss: {best_model.history['val_loss'][-1]}")
+    average = average_metrics_over_k_folds(k_fold_metrics) 
+    return average, best_model
 
 def evaluate_on_test_data(model_filepath : str, val_data_filepath, img_size : tuple, batch_size : int = 64) -> None:
     test_datagen = ImageDataGenerator()
@@ -191,3 +215,37 @@ def evaluate_on_test_data(model_filepath : str, val_data_filepath, img_size : tu
                                 tf.keras.metrics.FalsePositives(), tf.keras.metrics.TrueNegatives(), tf.keras.metrics.TruePositives(),
                                 tf.keras.metrics.MeanAbsoluteError(), tf.keras.metrics.MeanSquaredError()])
     print(model.evaluate(test_generator, batch_size=batch_size, verbose=1))
+    
+def plot_metrics(history : tf.keras.callbacks.History) -> None:
+    """ 
+    Plot the metrics for the model.
+    """
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+
+    axs[0].plot(history['loss'], label='train_loss')
+    axs[0].plot(history['val_loss'], label='val_loss')
+    axs[0].set_title('Model Loss')
+    axs[0].set_xlabel('Epoch')
+    axs[0].set_ylabel('Loss')
+    axs[0].legend()
+
+    # plot accuracy
+    axs[1].plot(history['acc'], label='train_accuracy')
+    axs[1].plot(history['val_acc'], label='val_accuracy')
+    axs[1].set_title('Model Accuracy')
+    axs[1].set_xlabel('Epoch')
+    axs[1].set_ylabel('Accuracy')
+    axs[1].legend()
+
+    # plot f1 score
+    axs[2].plot(history['f1_m'], label='train_f1_score')
+    axs[2].plot(history['val_f1_m'], label='val_f1_score')
+    axs[2].set_title('Model F1 Score')
+    axs[2].set_xlabel('Epoch')
+    axs[2].set_ylabel('F1 Score')
+    axs[2].legend()
+
+    # adjust layout and display the figure
+    plt.tight_layout()
+    plt.show()
+    plt.show()
