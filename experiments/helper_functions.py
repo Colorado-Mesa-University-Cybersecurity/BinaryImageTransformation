@@ -186,6 +186,8 @@ def convert_samples_to_binary(x: pd.DataFrame, labels: pd.DataFrame, directory :
     """
     x_vals = x.values
     label_vals = labels.values
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     if feature_types == None:
         Parallel(n_jobs=n_jobs)(delayed(process_samples_as_floats)(sample, label_vals[i], directory, precision, one, zero) for i,sample in enumerate(x_vals))    
     else:
@@ -232,3 +234,37 @@ def get_column_data_types(df: pd.DataFrame) -> List[str]:
             raise ValueError(f'Column "{col}" contains values of an unsupported type. Try to look at your data or clean before using.')
         col_types.append(col_type)
     return col_types
+
+def order_columns_by_correlation(df: pd.DataFrame, label: str, isIndx : bool = False) -> list:
+    '''
+        Order the columns of the dataframe in a sequence where the first element is the column most correlated with the label
+            and every success element is the remaining column most correlated with its predecessor
+    '''
+
+    current_columns : pd.DataFrame = df.columns.copy()
+    new_df          : pd.DataFrame = df.copy()
+    new_column_order: list = []
+    label_class_map : dict = {}
+
+    print(f'ordering columns by correlation: {label}, {len(current_columns)}, {df[label].unique()}')
+
+    for i, category in enumerate(df[label].unique()):
+        label_class_map[category] = i
+
+    new_df[label] = new_df[label].map(label_class_map)
+
+
+    current: str = label
+    last: str = None
+    stop_condition = 2 if isIndx else 1
+
+    while len(current_columns) > stop_condition:
+        last = current
+        current_columns = current_columns.drop(current)
+        current = new_df[current_columns].corrwith(new_df[current]).abs().idxmax()
+        new_column_order.append(current)
+
+    if isIndx:
+        new_column_order.insert(0, 'Id')
+    new_column_order.append(label)
+    return new_column_order
