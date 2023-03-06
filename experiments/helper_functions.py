@@ -150,7 +150,10 @@ def process_samples_as_type(sample: List[float], label : str, directory : str, p
         List[List[int]]: A 2D list of 1s and 0s representing the binary values of the features in the sample.
     """
     sample_out = []
-    for i,feature in enumerate(sample):
+    n_columns = len(sample)
+    n_rows = n_columns
+
+    for i, feature in enumerate(sample):
         if feature_types[i] == 0: # floating point
             feature_out = [one if b == '1' else zero for b in bitstring.BitArray(float=feature, length=precision).bin]
         elif feature_types[i] == 1: # integer
@@ -160,7 +163,17 @@ def process_samples_as_type(sample: List[float], label : str, directory : str, p
                 feature_out = [one]*precision
             else:
                 feature_out = [zero]*precision
+            
         sample_out.append(feature_out)
+        
+        # Update the number of rows if necessary
+        if len(feature_out) > n_rows:
+            n_rows = len(feature_out)
+
+    # Append new rows with zeros if necessary
+    for i in range(n_rows - n_columns):
+        sample_out.append([zero]*precision)
+
     image = Image.new('L', (len(sample_out[0]), len(sample_out)))
     image.putdata([value for row in sample_out for value in row])
     image.save(directory + '/' + label +  '.png')

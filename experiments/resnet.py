@@ -139,7 +139,7 @@ def get_callbacks(file_path : str, fold : int) -> list:
     time_callback = TimeHistory()
     resnet_filepath = file_path+'fold'+str(fold)+'-resnet50v2-saved-model-{epoch:02d}-val_acc-{val_acc:.2f}.hdf5'
     resnet_checkpoint = tf.keras.callbacks.ModelCheckpoint(resnet_filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-    resnet_early_stopping = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+    resnet_early_stopping = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=10)
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.05, patience=5, min_lr=0.000002)
     tb_callback = tf.keras.callbacks.TensorBoard(file_path+'tb_logs', update_freq=1)
     return [resnet_checkpoint,resnet_early_stopping,reduce_lr,tb_callback,time_callback]
