@@ -12,7 +12,6 @@ import os
 import shutil
 
 
-
 def print_library_versions() -> None:
     """
     Print out the versions for the libraries used
@@ -248,10 +247,48 @@ def get_column_data_types(df: pd.DataFrame) -> List[str]:
         col_types.append(col_type)
     return col_types
 
+def organize_photos_in_folders(image_directory : str, Y : pd.DataFrame) -> None:
+    '''
+        Organize the photos in the folder into subfolders based on the label
+        
+        Args:
+            image_directory (str): The directory to save the images to.
+            Y (pd.DataFrame): The pandas dataframe ids values to be converted to binary.
+    '''
+    dirs = Y.unique().tolist()
+    if not os.path.exists(image_directory + '/data'):
+        os.mkdir(image_directory + '/data')
+    new_dir = image_directory + '/data/'
+    if not os.path.exists(new_dir+'Train/'):
+        os.mkdir(new_dir+'Train/')
+    for i in dirs:
+        i = str(i).split('-')[1]
+        if not os.path.exists(new_dir+'Train/'+i):
+            os.mkdir(new_dir+'Train/'+i)
+    
+    total_images = 0
+    type_counts = {value.split("-")[1]: 0 for value in dirs}
+    for file in os.listdir(image_directory):
+        try:
+            dir = file.split("-")[1].split(".")[0]
+            type_counts[dir]+=1
+        except:
+            continue
+        
+        shutil.move(f"{image_directory}/{file}", f"{new_dir}Train/{dir}/{file}")
+        total_images += 1
+    print(total_images)
+    print(type_counts)
+
 def order_columns_by_correlation(df: pd.DataFrame, label: str, isIndx : bool = False) -> list:
     '''
         Order the columns of the dataframe in a sequence where the first element is the column most correlated with the label
             and every success element is the remaining column most correlated with its predecessor
+            
+        Args:
+            df (pd.DataFrame): The dataframe to order the columns of
+            label (str): The label to order the columns by (the column to be predicted)
+            isIndx (bool): Whether or not an index label is present in the dataframe
     '''
 
     current_columns : pd.DataFrame = df.columns.copy()

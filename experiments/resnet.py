@@ -204,6 +204,10 @@ def train_resnet_model_k_fold(num_classes : int, img_size : tuple,train_data_loc
     return average, best_model
 
 def evaluate_on_test_data(model_filepath : str, val_data_filepath, img_size : tuple, batch_size : int = 64) -> None:
+    '''
+    Evaluate the model on the test data. Currently, not a fully working function. 
+    Still undergoing testing.
+    '''
     test_datagen = ImageDataGenerator()
 
     test_generator = test_datagen.flow_from_directory(val_data_filepath,target_size=(img_size,img_size),
