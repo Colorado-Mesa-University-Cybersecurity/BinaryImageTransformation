@@ -1,4 +1,4 @@
-name: base
+name: BIE_conversion
 channels:
   - conda-forge
   - defaults
@@ -121,7 +121,7 @@ dependencies:
     - fastprogress==1.0.2
     - fonttools==4.31.2
     - gast==0.3.3
-    - giotto-tda==0.5.1
+    - giotto-tda==0.SpecNotFound: Invalid name 'BIE_conversion', try the format: user/package5.1
     - gitdb==4.0.9
     - gitpython==3.1.27
     - google-auth==1.28.0
