@@ -196,6 +196,7 @@ def convert_samples_to_binary(x: pd.DataFrame, labels: pd.DataFrame, directory :
     Returns:
         ndarray: A ndarray representing the binary values of the features in the dataframe.
     """
+    initial_time = time.time()
     x_vals = x.values
     label_vals = labels.values
     if not os.path.exists(directory):
@@ -204,7 +205,8 @@ def convert_samples_to_binary(x: pd.DataFrame, labels: pd.DataFrame, directory :
         Parallel(n_jobs=n_jobs)(delayed(process_samples_as_floats)(sample, label_vals[i], directory, precision, one, zero) for i,sample in enumerate(x_vals))    
     else:
         Parallel(n_jobs=n_jobs)(delayed(process_samples_as_type)(sample, label_vals[i], directory, precision, one, zero, feature_types) for i,sample in enumerate(x_vals))
-
+    end_time = time.time()
+    print(f"Time to convert {len(x_vals)} samples to binary: {end_time - initial_time} seconds. Seconds per sample = {(end_time - initial_time)/len(x_vals)}")
 
 def get_column_data_types(df: pd.DataFrame) -> List[str]:
     """
