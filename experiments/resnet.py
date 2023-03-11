@@ -124,7 +124,7 @@ def get_resnet_model(num_classes : int, img_size : tuple, learning_rate : float)
     resnet50_x = tf.keras.layers.Dense(num_classes,activation='softmax')(resnet50_x)
     resnet50_x_final_model = tf.keras.Model(inputs=ResNet50_model.input, outputs=resnet50_x)
     
-    opt = tf.keras.optimizers.SGD(lr=0.01,momentum=0.6)
+    opt = tf.keras.optimizers.SGD(lr=0.01,momentum=0.9)
     return resnet50_x_final_model, opt
 
 def get_callbacks(file_path : str, fold : int) -> list:
@@ -139,8 +139,8 @@ def get_callbacks(file_path : str, fold : int) -> list:
     time_callback = TimeHistory()
     resnet_filepath = file_path+'fold'+str(fold)+'-resnet50v2-saved-model-{epoch:02d}-val_acc-{val_acc:.2f}.hdf5'
     resnet_checkpoint = tf.keras.callbacks.ModelCheckpoint(resnet_filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-    resnet_early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=20)
-    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.05, patience=5, min_lr=0.000002)
+    resnet_early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=7)
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=4, min_lr=0.001, verbose=1)
     tb_callback = tf.keras.callbacks.TensorBoard(file_path+'tb_logs', update_freq=1)
     return [resnet_checkpoint,resnet_early_stopping,reduce_lr,tb_callback,time_callback]
 
