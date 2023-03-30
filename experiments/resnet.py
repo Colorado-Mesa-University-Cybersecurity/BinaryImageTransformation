@@ -144,6 +144,21 @@ def get_callbacks(file_path : str, fold : int) -> list:
     tb_callback = tf.keras.callbacks.TensorBoard(file_path+'tb_logs', update_freq=1)
     return [resnet_checkpoint,resnet_early_stopping,reduce_lr,tb_callback,time_callback]
 
+def get_callbacks_small_dataset(file_path : str, fold : int) -> list:
+    """Get a list of callbacks to use for training.
+    Args:
+        file_path (str): The path to save the model to.
+    Returns:
+        list: A list of callbacks to use for training.
+    """
+    time_callback = TimeHistory()
+    resnet_filepath = file_path+'fold'+str(fold)+'-resnet50v2-saved-model-{epoch:02d}-val_acc-{val_acc:.2f}.hdf5'
+    resnet_checkpoint = tf.keras.callbacks.ModelCheckpoint(resnet_filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+    resnet_early_stopping = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=10)
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.05, patience=5, min_lr=0.000002)
+    tb_callback = tf.keras.callbacks.TensorBoard(file_path+'tb_logs', update_freq=1)
+    return [resnet_checkpoint,resnet_early_stopping,reduce_lr,tb_callback,time_callback]
+
 def average_metrics_over_k_folds(k_fold_metrics : list):
     """Average the metrics over the k folds.
 
@@ -164,7 +179,7 @@ def average_metrics_over_k_folds(k_fold_metrics : list):
     return avg_metrics
 
 def train_resnet_model_k_fold(num_classes : int, img_size : tuple,train_data_location : str, number_of_epochs : int,
-                              file_path : str, num_folds : int = 5, batch_size : int = 64, seed: int = 17) -> None:
+                              file_path : str, num_folds : int = 5, batch_size : int = 64, seed: int = 17, small_dataset: bool = False) -> None:
     """Train a Resnet 50 model using k-fold cross validation.
 
     Args:
@@ -175,6 +190,7 @@ def train_resnet_model_k_fold(num_classes : int, img_size : tuple,train_data_loc
         file_path (str): The path to save the model to.
         num_folds (int, optional): The number of folds to use for cross validation. Defaults to 5.
         batch_size (int, optional): The batch size to use for training. Defaults to 64.
+        small_dataset (bool, optional): Whether or not the dataset is small. Defaults to False.
     """
     best_model = None
     actual_model = None
@@ -184,7 +200,10 @@ def train_resnet_model_k_fold(num_classes : int, img_size : tuple,train_data_loc
             print("Fold: ", fold)
             train_generator, validation_generator = get_generators(train_data_location, batch_size, img_size,seed)
             resnet50_x_final_model, opt = get_resnet_model(num_classes, img_size, 0.01)
-            callback_list = get_callbacks(file_path, fold)
+            if not small_dataset:
+                callback_list = get_callbacks(file_path, fold)
+            else:
+                callback_list = get_callbacks_small_dataset(file_path, fold)
             
             resnet50_x_final_model.compile(loss = 'categorical_crossentropy', optimizer= opt, 
                                 metrics=['acc',f1_m,precision_m, recall_m,tf.keras.metrics.AUC(),tf.keras.metrics.FalseNegatives(),
