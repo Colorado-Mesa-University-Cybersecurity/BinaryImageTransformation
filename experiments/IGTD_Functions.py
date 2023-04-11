@@ -505,7 +505,8 @@ def generate_image_data(data, index, num_row, num_column, coord, image_folder=No
         data = data.values
     else:
         samples = [str(i) for i in range(data.shape[0])]
-
+    if not os.path.exists(image_folder):
+        os.makedirs(image_folder)
     data_2 = data.copy()
     data_2 = data_2[:, index]
     max_v = np.max(data_2)
@@ -645,4 +646,4 @@ def table_to_image(norm_d, scale, fea_dist_method, image_dist_method, save_image
     
 def run(norm_d, index, min_id,scale,coordinate,normDir):
     generate_image_data(data=norm_d, index=index[min_id, :], num_row=scale[0], num_column=scale[1],
-        coord=coordinate, image_folder=normDir + '/data', file_name='')
+        coord=coordinate, image_folder=normDir, file_name='')
