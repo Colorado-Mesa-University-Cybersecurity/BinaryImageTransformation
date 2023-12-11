@@ -1,5 +1,5 @@
 # Binary Image Encoding (BIE)
-A repository for out research in Binary Image Transformations for the classification of Tabular Data.
+A repository for our research in Binary Image Transformations for the classification of Tabular Data.
 
 
 ## Download the Datasets used in this study
