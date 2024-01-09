@@ -24,6 +24,30 @@ def print_library_versions() -> None:
     print(f"PIL version:".ljust(25), f"{Image.__version__}")
 
 
+def add_id_column(df: pd.DataFrame, column_name: str) -> pd.DataFrame:
+    """
+    Adds a new column to a pandas DataFrame with unique identifiers for each value in a specified column.
+
+    Args:
+        df (pandas.DataFrame): The DataFrame to modify.
+        column_name (str): The name of the column to use for generating unique identifiers.
+
+    Returns:
+        pandas.DataFrame: The modified DataFrame with the new 'Id' column.
+    """
+    if 'Id' not in df.columns:
+        df['Id'] = ''
+
+    unique_values = df[column_name].unique().tolist()
+    values_dict = {value: 0 for value in unique_values}
+    for index, row in df.iterrows():
+        value = row[column_name]
+        values_dict[value] += 1
+        name = str(values_dict[value]) + "-" + value
+        df.at[index, 'Id'] = name
+    return df
+
+
 def compare_3d_lists(list1: List[List[List]], list2: List[List[List]]) -> bool:
     """
     Compare two 3D lists and return True if they have the same shape and elements, and False otherwise.
@@ -264,59 +288,143 @@ def organize_photos_in_folders(image_directory : str, Y : pd.DataFrame) -> None:
     if not os.path.exists(new_dir+'Train/'):
         os.mkdir(new_dir+'Train/')
     for i in dirs:
-        i = str(i).split('-')[1]
+        i = str(i)
         if not os.path.exists(new_dir+'Train/'+i):
             os.mkdir(new_dir+'Train/'+i)
-    
     total_images = 0
-    type_counts = {value.split("-")[1]: 0 for value in dirs}
+    type_counts = {value: 0 for value in dirs}
     for file in os.listdir(image_directory):
         try:
             dir = file.split("-")[1].split(".")[0]
             type_counts[dir]+=1
         except:
             continue
-        
         shutil.move(f"{image_directory}/{file}", f"{new_dir}Train/{dir}/{file}")
         total_images += 1
     print(total_images)
     print(type_counts)
 
-def order_columns_by_correlation(df: pd.DataFrame, label: str, isIndx : bool = False) -> list:
-    '''
-        Order the columns of the dataframe in a sequence where the first element is the column most correlated with the label
-            and every success element is the remaining column most correlated with its predecessor
-            
-        Args:
-            df (pd.DataFrame): The dataframe to order the columns of
-            label (str): The label to order the columns by (the column to be predicted)
-            isIndx (bool): Whether or not an index label is present in the dataframe
-    '''
+# def organize_photos_in_folders(image_directory : str, Y : pd.DataFrame) -> None:
+#     '''
+#         Organize the photos in the folder into subfolders based on the label
+        
+#         Args:
+#             image_directory (str): The directory to save the images to.
+#             Y (pd.DataFrame): The pandas dataframe ids values to be converted to binary.
+#     '''
+#     dirs = Y.unique().tolist()
+#     if not os.path.exists(image_directory + '/data'):
+#         os.mkdir(image_directory + '/data')
+#     new_dir = image_directory + '/data/'
+#     if not os.path.exists(new_dir+'Train/'):
+#         os.mkdir(new_dir+'Train/')
+#     for i in dirs:
+#         i = str(i).split('-')[1]
+#         if not os.path.exists(new_dir+'Train/'+i):
+#             os.mkdir(new_dir+'Train/'+i)
+    
+#     total_images = 0
+#     type_counts = {value.split("-")[1]: 0 for value in dirs}
+#     for file in os.listdir(image_directory):
+#         try:
+#             dir = file.split("-")[1]
+#             dif = dir.split(".")[0]
+#             type_counts[dir]+=1
+#         except:
+#             continue
+        
+#         shutil.move(f"{image_directory}/{file}", f"{new_dir}Train/{dir}/{file}")
+#         total_images += 1
+#     print(total_images)
+#     print(type_counts)
 
-    current_columns : pd.DataFrame = df.columns.copy()
-    new_df          : pd.DataFrame = df.copy()
+def order_columns_by_correlation(df, label, isIndx : bool = False) -> List[str]:
+    '''
+        A function to reorder the columns of the dataframe such that the first element is the most correlated with the label,
+           and every nth element is the column with the highest correlation with the n-1 th column. After an element is placed
+           in the output list, it is removed from the list of candidate columns
+    '''
+    new_df: pd.DataFrame = df.copy()
+    add_id: bool         = False
+
+    if 'Id' in new_df.columns:
+        new_df = new_df.drop(['Id'], axis=1)
+        add_id = True
+
+    current_columns : pd.DataFrame = new_df.columns.copy()
     new_column_order: list = []
     label_class_map : dict = {}
+    seen            : list = []
 
     print(f'ordering columns by correlation: {label}, {len(current_columns)}, {df[label].unique()}')
+
 
     for i, category in enumerate(df[label].unique()):
         label_class_map[category] = i
 
     new_df[label] = new_df[label].map(label_class_map)
 
-
+    corrs = new_df.corr()
     current: str = label
-    last: str = None
-    stop_condition = 2 if isIndx else 1
+    columns = new_df.columns
 
-    while len(current_columns) > stop_condition:
-        last = current
+    while len(current_columns) > 1:
         current_columns = current_columns.drop(current)
-        current = new_df[current_columns].corrwith(new_df[current]).abs().idxmax()
+        seen.append(current)
+
+
+        corr_with_current = corrs[current].drop(seen)
+        # print(corr_with_current)
+        # print(corr_with_current.idxmax())
+        current = corr_with_current.idxmax()
         new_column_order.append(current)
 
-    if isIndx:
-        new_column_order.insert(0, 'Id')
+    print(new_column_order)
+    for col in columns:
+        if col not in [label] and col not in new_column_order:
+            print(col, 'not in new column order')
+
     new_column_order.append(label)
+    if add_id:
+        new_column_order.append('Id')
+
     return new_column_order
+
+# def order_columns_by_correlation(df: pd.DataFrame, label: str, isIndx : bool = False) -> list:
+#     '''
+#         Order the columns of the dataframe in a sequence where the first element is the column most correlated with the label
+#             and every success element is the remaining column most correlated with its predecessor
+            
+#         Args:
+#             df (pd.DataFrame): The dataframe to order the columns of
+#             label (str): The label to order the columns by (the column to be predicted)
+#             isIndx (bool): Whether or not an index label is present in the dataframe
+#     '''
+
+#     current_columns : pd.DataFrame = df.columns.copy()
+#     new_df          : pd.DataFrame = df.copy()
+#     new_column_order: list = []
+#     label_class_map : dict = {}
+
+#     print(f'ordering columns by correlation: {label}, {len(current_columns)}, {df[label].unique()}')
+
+#     for i, category in enumerate(df[label].unique()):
+#         label_class_map[category] = i
+
+#     new_df[label] = new_df[label].map(label_class_map)
+
+
+#     current: str = label
+#     last: str = None
+#     stop_condition = 2 if isIndx else 1
+
+#     while len(current_columns) > stop_condition:
+#         last = current
+#         current_columns = current_columns.drop(current)
+#         current = new_df[current_columns].corrwith(new_df[current]).abs().idxmax()
+#         new_column_order.append(current)
+
+#     if isIndx:
+#         new_column_order.insert(0, 'Id')
+#     new_column_order.append(label)
+#     return new_column_order

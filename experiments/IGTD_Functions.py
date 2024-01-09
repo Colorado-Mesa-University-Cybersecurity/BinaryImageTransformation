@@ -277,7 +277,7 @@ def IGTD_absolute_error(source, target, max_step=1000, switch_t=0, val_step=50, 
 
         pre_err = err
 
-    index_record = index_record[:len(err_record), :].astype(np.int)
+    index_record = index_record[:len(err_record), :].astype(np.int64)
     if save_folder is not None:
         """ pd.DataFrame(index_record).to_csv(save_folder + '/' + file_name + '_index.txt', header=False, index=False,
             sep='\t', line_terminator='\r\n') """
@@ -445,16 +445,15 @@ def IGTD_square_error(source, target, max_step=1000, switch_t=0, val_step=50, mi
 
         pre_err = err
 
-    index_record = index_record[:len(err_record), :].astype(np.int)
+    index_record = index_record[:len(err_record), :].astype(np.int64)
     if save_folder is not None:
         pd.DataFrame(index_record).to_csv(save_folder + '/' + file_name + '_index.txt', header=False, index=False,
-            sep='\t', line_terminator='\r\n')
+            sep='\t')
         pd.DataFrame(np.transpose(np.vstack((err_record, np.array(range(s + 2))))),
             columns=['error', 'steps']).to_csv(save_folder + '/' + file_name + '_error_and_step.txt',
-            header=True, index=False, sep='\t', line_terminator='\r\n')
+            header=True, index=False, sep='\t')
         pd.DataFrame(np.transpose(np.vstack((err_record, run_time))), columns=['error', 'run_time']).to_csv(
-            save_folder + '/' + file_name + '_error_and_time.txt', header=True, index=False, sep='\t',
-            line_terminator='\r\n')
+            save_folder + '/' + file_name + '_error_and_time.txt', header=True, index=False, sep='\t')
 
     return index_record, err_record, run_time
 
@@ -501,7 +500,7 @@ def generate_image_data(data, index, num_row, num_column, coord, image_folder=No
     '''
 
     if isinstance(data, pd.DataFrame):
-        samples = data.index.map(np.str)
+        samples = data.index.map(str)
         data = data.values
     else:
         samples = [str(i) for i in range(data.shape[0])]
